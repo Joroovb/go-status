@@ -6,11 +6,24 @@ import (
 	"os"
 	"time"
 
+	"github.com/mackerelio/go-osstat/memory"
 	"golang.org/x/sys/unix"
 )
 
 func main() {
-	fmt.Printf("%s GB | %s | %s\n", GetFreeSpace(), GetLocalIP(), GetLocalTime())
+	fmt.Printf("%s | %sG free | %s | %s\n", GetMemoryUsage(), GetFreeSpace(), GetLocalIP(), GetLocalTime())
+}
+
+func GetMemoryUsage() string {
+	memory, err := memory.Get()
+	if err != nil {
+		return "error getting memory"
+	}
+
+	used := float64(memory.Used) / 1_000_000_000
+	total := float64(memory.Total) / 1_000_000_000
+
+	return fmt.Sprintf("%.1fG/%.1fG", used, total)
 }
 
 func GetFreeSpace() string {
