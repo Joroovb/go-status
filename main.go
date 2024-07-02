@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"os"
+	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mackerelio/go-osstat/memory"
@@ -11,7 +15,10 @@ import (
 )
 
 func main() {
-	fmt.Printf("%s | %sG free | %s | %s\n", GetMemoryUsage(), GetFreeSpace(), GetLocalIP(), GetLocalTime())
+	path, _ := BatExists("BAT0")
+	perc, _ := GetBatteryLevel(path)
+
+	fmt.Printf("%v%% | %s | %sG free | %s | %s\n", perc, GetMemoryUsage(), GetFreeSpace(), GetLocalIP(), GetLocalTime())
 }
 
 func GetMemoryUsage() string {
@@ -63,4 +70,36 @@ func GetLocalIP() string {
 		}
 	}
 	return "no connection"
+}
+
+func BatExists(name string) (string, bool) {
+	filePath := path.Join("/sys", "class", "power_supply", name)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", false
+	}
+
+	return filePath, true
+}
+
+func GetBatteryLevel(filePath string) (float64, error) {
+	energyNow, err := getFloat(path.Join(filePath, "energy_now"))
+	if err != nil {
+		return 0, err
+	}
+
+	energyFull, err := getFloat(path.Join(filePath, "energy_full"))
+	if err != nil {
+		return 0, err
+	}
+
+	return math.Round((energyNow / energyFull) * 100), nil
+}
+
+func getFloat(filepath string) (value float64, err error) {
+	file, err := os.ReadFile(filepath)
+	if err != nil {
+		return value, err
+	}
+	return strconv.ParseFloat(strings.TrimSpace(string(file)), 64)
 }
